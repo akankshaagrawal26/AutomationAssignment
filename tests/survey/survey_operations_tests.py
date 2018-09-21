@@ -31,35 +31,35 @@ class SurveyOperationsTests(unittest.TestCase):
         self.config = ConfigReader("config.yaml")
 
     @pytest.mark.run(order=4)
-    # def test_change_survey_title(self):
-    #     """
-    #
-    #     Function to test survey title changed or not
-    #     """
-    #     try:
-    #         self.log.info("In test_change_survey_title")
-    #         self.so.edit_survey_title()
-    #         result = self.so.verify_survey_title_edited()
-    #         self.log.info("Edited title received ::" + result)
-    #         self.ts.mark_final("test_change_survey_title", result, "Title Change Verification")
-    #     except Exception as e:
-    #         self.log.info("Exception in test_change_survey_title", e)
-    #
-    # @pytest.mark.run(order=5)
-    # def test_add_page_title(self):
-    #     """
-    #
-    #     Function to test page title added or not
-    #     """
-    #     try:
-    #         self.log.info("In test_add_page_title")
-    #         self.so.add_page_title()
-    #         result = self.so.verify_page_title_added()
-    #         self.log.info("Page title received ::" + result)
-    #         self.ts.mark_final("test_add_page_title", result, "Add Page Verification")
-    #     except Exception as e:
-    #         self.log.info("Exception in test_change_survey_title", e)
-    #
+    def test_change_survey_title(self):
+        """
+
+        Function to test survey title changed or not
+        """
+        try:
+            self.log.info("In test_change_survey_title")
+            self.so.edit_survey_title()
+            result = self.so.verify_survey_title_edited()
+            self.log.info("Edited title received ::" + result)
+            self.ts.mark_final("test_change_survey_title", result, "Title Change Verification")
+        except Exception as e:
+            self.log.info("Exception in test_change_survey_title", e)
+
+    @pytest.mark.run(order=5)
+    def test_add_page_title(self):
+        """
+
+        Function to test page title added or not
+        """
+        try:
+            self.log.info("In test_add_page_title")
+            self.so.add_page_title()
+            result = self.so.verify_page_title_added()
+            self.log.info("Page title received ::" + result)
+            self.ts.mark_final("test_add_page_title", result, "Add Page Verification")
+        except Exception as e:
+            self.log.info("Exception in test_change_survey_title", e)
+
     @pytest.mark.run(order=6)
     def test_verify_question1_added(self):
         """

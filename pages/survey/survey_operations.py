@@ -19,7 +19,6 @@ class SurveyOperations(BasePage):
         """
         Init SurveyOperations class
         :param driver
-
         """
         super().__init__(driver)
         self.driver = driver
@@ -78,10 +77,9 @@ class SurveyOperations(BasePage):
     def edit_survey_title(self):
         new_title = self.conf.get_survey_title_new()
         self.check_popup()
-        time.sleep(5)
+        time.sleep(3)
         self.click_survey_title()
         self.enter_survey_title(new_title)
-        time.sleep(1)
         self.save_survey_title()
 
     def add_page_title(self):
@@ -89,7 +87,6 @@ class SurveyOperations(BasePage):
         page_title = self.conf.get_page_title()
         self.click_page_title()
         self.enter_page_title(page_title)
-        time.sleep(1)
         self.save_page_title()
 
     def verify_page_title_added(self):
@@ -101,4 +98,3 @@ class SurveyOperations(BasePage):
         time.sleep(1)
         survey_title = self.get_text(self._check_survey_title, locator_type="xpath", info="Survey Title")
         return survey_title
-

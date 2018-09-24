@@ -1,11 +1,18 @@
 import csv
-def getCSVData(fileName):
+
+
+def get_csv_data(file_name):
+    """
+    Get data from csv file
+    :param file_name: Name of the file to read
+    :return: list of data
+    """
     # create an empty list to store rows
     rows = []
     # open the CSV file
-    dataFile = open(fileName, "r")
+    data_file = open(file_name, "r")
     # create a CSV Reader from CSV file
-    reader = csv.reader(dataFile)
+    reader = csv.reader(data_file)
     # skip the headers
     next(reader)
     # add rows from reader to list

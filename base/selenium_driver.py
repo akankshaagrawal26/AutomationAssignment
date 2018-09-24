@@ -256,7 +256,7 @@ class SeleniumDriver:
             return False
 
     def wait_for_element(self, locator, locator_type="id",
-                         timeout=15, poll_frequency=1):
+                         timeout=60, poll_frequency=0.5):
         """
         Wait for the element to appear
         :param locator: Value of locator

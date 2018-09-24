@@ -113,20 +113,17 @@ class SurveyQuestions(BasePage):
         self.enter_question("Que1")
         self.click_question_type()
         self.select_question_type("Type1")
-        time.sleep(2)
         self.save_question()
 
     def set_question2(self):
         self.log.info("Adding question 2")
         self.element_click(self._click_builder, locator_type="xpath")
-        time.sleep(1)
+        self.wait_for_element(self._drag_element_multiplechoice, locator_type="xpath")
         self.drag_n_drop(self._drag_element_multiplechoice, drop=self._drop_element)
-        time.sleep(2)
         self.enter_question("Que2")
         self.send_keys(self._que2_option_value1, locator=self._que6_option_type1, locator_type="xpath")
         self.send_keys(self._que2_option_value2, locator=self._que6_option_type2, locator_type="xpath")
         self.send_keys(self._que2_option_value3, locator=self._que6_option_type3, locator_type="xpath")
-        time.sleep(2)
         self.save_question()
 
     def set_question3(self):
@@ -136,7 +133,6 @@ class SurveyQuestions(BasePage):
         self.click_question_type()
         self.select_question_type("Type3")
         self.element_click(self._time_option_untick, locator_type="xpath")
-        time.sleep(2)
         self.save_question()
 
     def set_question4(self):
@@ -146,7 +142,6 @@ class SurveyQuestions(BasePage):
         self.enter_question("Que4")
         self.click_question_type()
         self.select_question_type("Type4")
-        time.sleep(2)
         self.save_question()
 
     def set_question5(self):
@@ -154,12 +149,10 @@ class SurveyQuestions(BasePage):
         self.element_click(self._click_builder, locator_type="xpath")
         self.wait_for_element(self._drag_element_dropdown, locator_type="xpath")
         self.drag_n_drop(self._drag_element_dropdown, drop=self._drop_element)
-        time.sleep(2)
         self.enter_question("Que5")
+        self.wait_for_element(self._click_type_option, locator_type="xpath")
         element = self.get_element(self._click_type_option, locator_type="xpath")
-        time.sleep(1)
         self.drop_down(element, data="Yes - No", select_type="visible text")
-        time.sleep(2)
         self.save_question()
 
     def set_question6(self):
@@ -173,7 +166,6 @@ class SurveyQuestions(BasePage):
         self.send_keys(self._que6_option_value3, locator=self._que6_option_type3, locator_type="xpath")
         self.send_keys(self._que6_option_value4, locator=self._que6_option_type4, locator_type="xpath")
         self.send_keys(self._que6_option_value5, locator=self._que6_option_type5, locator_type="xpath")
-        time.sleep(2)
         self.save_question()
 
     def set_question7(self):
@@ -189,9 +181,8 @@ class SurveyQuestions(BasePage):
         self.send_keys(self._que7_option_value5, locator=self._que7_option_type5, locator_type="xpath")
         self.send_keys(self._que7_option_value6, locator=self._que7_option_type6, locator_type="xpath")
         self.send_keys(self._que7_option_value7, locator=self._que7_option_type7, locator_type="xpath")
-        time.sleep(1)
+        #time.sleep(1)
         self.element_click(self._del_column,locator_type="xpath")
-        time.sleep(2)
         self.save_question()
 
     def set_question8(self):
@@ -205,7 +196,6 @@ class SurveyQuestions(BasePage):
         self.send_keys(self._que8_option_value3, locator=self._que8_option_type3, locator_type="xpath")
         self.send_keys(self._que8_option_value4, locator=self._que8_option_type4, locator_type="xpath")
         self.send_keys(self._que8_option_value5, locator=self._que8_option_type5, locator_type="xpath")
-        time.sleep(2)
         self.save_question()
 
     def set_question9(self):
@@ -213,12 +203,10 @@ class SurveyQuestions(BasePage):
         self.element_click(self._click_builder, locator_type="xpath")
         self.wait_for_element(self._drag_element_multiplechoice, locator_type="xpath")
         self.drag_n_drop(self._drag_element_multiplechoice, drop=self._drop_element)
-        time.sleep(2)
         self.enter_question("Que9")
+        self.wait_for_element(self._click_type_option, locator_type="xpath")
         element = self.get_element(self._click_type_option, locator_type="xpath")
-        time.sleep(1)
         self.drop_down(element, data="Yes - No", select_type="visible text")
-        time.sleep(2)
         self.save_question()
 
     def set_question10(self):
@@ -227,7 +215,6 @@ class SurveyQuestions(BasePage):
         self.enter_question("Que10")
         self.click_question_type()
         self.select_question_type("Type10")
-        time.sleep(2)
         self.save_question()
 
     def verify_question_added_successfully(self, question, ques_type):

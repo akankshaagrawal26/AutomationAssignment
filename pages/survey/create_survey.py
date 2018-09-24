@@ -24,13 +24,13 @@ class CreateSurvey(BasePage):
         self.conf = ConfigReader("config.yaml")
 
     # Locators
-    _create_survey = "//a[contains(@class,'create-survey alt btn SL_split')]"
+    _create_survey = "//div[@class='actions']//a[contains(@class,'create-survey')]"
     _survey_title = "surveyTitle"
-    _click_category_list = "//div[@class='Select-placeholder']"
+    _click_category_list = "//div[@class='Select-control']//div[@class='Select-placeholder']"
     _survey_category = "react-select-2--option-1"
     _click_create_survey_button = "//button[contains(text(),'CREATE SURVEY')]"
     _click_start_from_scratch = "scratch"
-    _create_survey_success = "//a[contains(@href,'/create/?sm=')]"
+    _create_survey_success = "//div[@class='global-navigation-header-centered']//a[contains(@href,'/create/?sm=')]"
 
     def click_survey_link(self):
         self.element_click(self._create_survey, locator_type="xpath")

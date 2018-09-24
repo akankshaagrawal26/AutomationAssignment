@@ -25,12 +25,12 @@ class LoginPage(SeleniumDriver):
         super(LoginPage, self).__init__(driver)
 
     # Locators
-    _login_link = "//a[contains(@class,'log-in static-buttons')]"
+    _login_link = "//div[contains(@class,'inner-header-top')]//a[contains(@class,'log-in')]"
     _username_field = "username"
     _password_field = "password"
-    _login_button = "//button[@type='submit']"
+    _login_button = "//div[contains(@class,'input-list-item')]//button[@type='submit']"
     _login_success = "userAcctTab_MainMenu"
-    _login_fail = "//h1[contains(@class,'wds-type--page-title')]"
+    _login_fail = "//div[contains(@class,'account-header')]//h1[contains(@class,'page-title')]"
     _logout = "//li[@id='dd-my-account']//a[contains(@href,'/user/sign-out/')]"
 
     def click_login_link(self):

@@ -3,7 +3,7 @@
  platfrom:
    browser: "chrome"
  siteconfiguration:
-   url: "https://www.surveymonkey.com/"
+   url: "https://www.surveymonkey.com"
  surveyConfig:
    survey_title: "First Survey"
    survey_title_new: "Survey Monkey-First Survey"
@@ -29,4 +29,6 @@
    Type9: "Multiple Choice"
    Que10: "Comments / Feedback"
    Type10: "Comment Box"
+
+
 

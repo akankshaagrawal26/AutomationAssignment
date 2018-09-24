@@ -1,0 +1,34 @@
+# Basic configurations and Questions
+
+ platfrom:
+   browser: "chrome"
+ siteconfiguration:
+   url: "https://www.surveymonkey.com"
+ surveyConfig:
+   survey_title: "First Survey"
+   survey_title_new: "Survey Monkey-First Survey"
+   page_title: "Survey for Customer Feedback"
+ Questions:
+   Que1: "Enter your email."
+   Type1: "Single Textbox"
+   Que2: "How often do you use SurveyMonkey?"
+   Type2: "Multiple Choice"
+   Que3: "From When are you using SurveyMonkey?"
+   Type3: "Date / Time"
+   Que4: "How will rate the ease of survey creation?"
+   Type4: "Star Rating"
+   Que5: "Did you get meaningful data from survey analysis?"
+   Type5: "Dropdown"
+   Que6: "Check the Features you like about SurveyMonkey?"
+   Type6: "Checkboxes"
+   Que7: "Rate our features."
+   Type7: "Matrix / Rating Scale"
+   Que8: "List the features you like most."
+   Type8: "Multiple Textboxes"
+   Que9: "Will recommend SurveyMonkey to your friends / Colleagues?"
+   Type9: "Multiple Choice"
+   Que10: "Comments / Feedback"
+   Type10: "Comment Box"
+
+
+

@@ -31,7 +31,7 @@ class CreateSurveyTests(unittest.TestCase):
     def test_create_survey(self):
         """
 
-        Funtion to test survey created successfully or not
+        Function to test survey created successfully or not
         """
         try:
             self.log.info("In test_create_survey")
@@ -41,13 +41,5 @@ class CreateSurveyTests(unittest.TestCase):
             self.ts.mark_final("test_create_survey", result, "Survey created Verification")
         except Exception as e:
             self.log.info("Exception in test_create_survey", e)
-
-
-
-
-
-
-
-
 
 

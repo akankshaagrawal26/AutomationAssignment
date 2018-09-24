@@ -32,7 +32,8 @@ class SurveyQuestions(BasePage):
     _click_question_type = "changeQType"
     _click_type_option = "//div[@id='editQuestion']//select[@id='answerBankCategorySelect']"
     _save_question = "//div[@id='editQuestion']//section[@class='t1']//a[contains(@class,'save')]"
-    _cancel_question = "//div[@id='editQuestion']//section[@class='t1']//a[contains(@class,'cancel')]"
+    _cancel_question = "//div[@id='editQuestion']//section[@class='t1']" \
+                       "//a[contains(@class,'cancel')][contains(text(),'CANCEL')]"
 
     _time_option_untick = "//table[@id='rows']//label[contains(text(),'Time Info')]"
     _click_builder = "//li[@title='Builder']"
@@ -232,12 +233,9 @@ class SurveyQuestions(BasePage):
     def verify_question_added_successfully(self, question, ques_type):
         try:
             self.log.info("In verify_question_added_successfully :: " + question + " :: " + ques_type)
-            time.sleep(5)
+            time.sleep(3)
             element_into_view = self.get_element("//h4[@class='question-title-container']//span[contains(text(),'"
                                                  + question + "')]", locator_type="xpath")
-            self.driver.execute_script("arguments[0].scrollIntoView(true);", element_into_view)
-            time.sleep(1)
-            self.driver.execute_script("window.scrollBy(0, -200);")
             self.element_click(element=element_into_view)
             self.wait_for_element("//a[@id='changeQType']//span[contains(text(),'" + ques_type + "')]",
                                   locator_type="xpath")
@@ -245,7 +243,6 @@ class SurveyQuestions(BasePage):
                                                      "')]", locator_type="xpath")
             time.sleep(2)
             self.cancel_question()
-            time.sleep(3)
             return result
         except Exception as e:
             self.log.info("Exception while verifying question::", e)

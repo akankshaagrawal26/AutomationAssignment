@@ -326,8 +326,8 @@ class SeleniumDriver:
             source = self.get_element(drag, locator_type="xpath")
             destination = self.get_element(drop, locator_type="xpath")
             actions = ActionChains(self.driver)
-            # actions.drag_and_drop(drag,drop).perform()
             actions.click_and_hold(source).move_to_element(destination).release().perform()
             self.log.info("Element dragged and dropped")
         except Exception as e:
             self.log.info("Unable to Drag and drop", e)
+

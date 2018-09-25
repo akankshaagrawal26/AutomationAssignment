@@ -181,7 +181,6 @@ class SurveyQuestions(BasePage):
         self.send_keys(self._que7_option_value5, locator=self._que7_option_type5, locator_type="xpath")
         self.send_keys(self._que7_option_value6, locator=self._que7_option_type6, locator_type="xpath")
         self.send_keys(self._que7_option_value7, locator=self._que7_option_type7, locator_type="xpath")
-        #time.sleep(1)
         self.element_click(self._del_column,locator_type="xpath")
         self.save_question()
 

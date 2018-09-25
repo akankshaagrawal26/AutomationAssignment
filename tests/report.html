@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Test Report</title>
+    <link href="assets/style.css" rel="stylesheet" type="text/css"/></head>
+  <body onLoad="init()">
+    <script>/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function toArray(iter) {
+    if (iter === null) {
+        return null;
+    }
+    return Array.prototype.slice.call(iter);
+}
+
+function find(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return elem.querySelector(selector);
+}
+
+function find_all(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return toArray(elem.querySelectorAll(selector));
+}
+
+function sort_column(elem) {
+    toggle_sort_states(elem);
+    var colIndex = toArray(elem.parentNode.childNodes).indexOf(elem);
+    var key;
+    if (elem.classList.contains('numeric')) {
+        key = key_num;
+    } else if (elem.classList.contains('result')) {
+        key = key_result;
+    } else {
+        key = key_alpha;
+    }
+    sort_table(elem, key(colIndex));
+}
+
+function show_all_extras() {
+    find_all('.col-result').forEach(show_extras);
+}
+
+function hide_all_extras() {
+    find_all('.col-result').forEach(hide_extras);
+}
+
+function show_extras(colresult_elem) {
+    var extras = colresult_elem.parentNode.nextElementSibling;
+    var expandcollapse = colresult_elem.firstElementChild;
+    extras.classList.remove("collapsed");
+    expandcollapse.classList.remove("expander");
+    expandcollapse.classList.add("collapser");
+}
+
+function hide_extras(colresult_elem) {
+    var extras = colresult_elem.parentNode.nextElementSibling;
+    var expandcollapse = colresult_elem.firstElementChild;
+    extras.classList.add("collapsed");
+    expandcollapse.classList.remove("collapser");
+    expandcollapse.classList.add("expander");
+}
+
+function show_filters() {
+    var filter_items = document.getElementsByClassName('filter');
+    for (var i = 0; i < filter_items.length; i++)
+        filter_items[i].hidden = false;
+}
+
+function add_collapse() {
+    // Add links for show/hide all
+    var resulttable = find('table#results-table');
+    var showhideall = document.createElement("p");
+    showhideall.innerHTML = '<a href="javascript:show_all_extras()">Show all details</a> / ' +
+                            '<a href="javascript:hide_all_extras()">Hide all details</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);
+
+    // Add show/hide link to each result
+    find_all('.col-result').forEach(function(elem) {
+        var collapsed = get_query_parameter('collapsed') || 'Passed';
+        var extras = elem.parentNode.nextElementSibling;
+        var expandcollapse = document.createElement("span");
+        if (collapsed.includes(elem.innerHTML)) {
+            extras.classList.add("collapsed");
+            expandcollapse.classList.add("expander");
+        } else {
+            expandcollapse.classList.add("collapser");
+        }
+        elem.appendChild(expandcollapse);
+
+        elem.addEventListener("click", function(event) {
+            if (event.currentTarget.parentNode.nextElementSibling.classList.contains("collapsed")) {
+                show_extras(event.currentTarget);
+            } else {
+                hide_extras(event.currentTarget);
+            }
+        });
+    })
+}
+
+function get_query_parameter(name) {
+    var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+function init () {
+    reset_sort_headers();
+
+    add_collapse();
+
+    show_filters();
+
+    toggle_sort_states(find('.initial-sort'));
+
+    find_all('.sortable').forEach(function(elem) {
+        elem.addEventListener("click",
+                              function(event) {
+                                  sort_column(elem);
+                              }, false)
+    });
+
+};
+
+function sort_table(clicked, key_func) {
+    var rows = find_all('.results-table-row');
+    var reversed = !clicked.classList.contains('asc');
+    var sorted_rows = sort(rows, key_func, reversed);
+    /* Whole table is removed here because browsers acts much slower
+     * when appending existing elements.
+     */
+    var thead = document.getElementById("results-table-head");
+    document.getElementById('results-table').remove();
+    var parent = document.createElement("table");
+    parent.id = "results-table";
+    parent.appendChild(thead);
+    sorted_rows.forEach(function(elem) {
+        parent.appendChild(elem);
+    });
+    document.getElementsByTagName("BODY")[0].appendChild(parent);
+}
+
+function sort(items, key_func, reversed) {
+    var sort_array = items.map(function(item, i) {
+        return [key_func(item), i];
+    });
+    var multiplier = reversed ? -1 : 1;
+
+    sort_array.sort(function(a, b) {
+        var key_a = a[0];
+        var key_b = b[0];
+        return multiplier * (key_a >= key_b ? 1 : -1);
+    });
+
+    return sort_array.map(function(item) {
+        var index = item[1];
+        return items[index];
+    });
+}
+
+function key_alpha(col_index) {
+    return function(elem) {
+        return elem.childNodes[1].childNodes[col_index].firstChild.data.toLowerCase();
+    };
+}
+
+function key_num(col_index) {
+    return function(elem) {
+        return parseFloat(elem.childNodes[1].childNodes[col_index].firstChild.data);
+    };
+}
+
+function key_result(col_index) {
+    return function(elem) {
+        var strings = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed',
+                       'Skipped', 'Passed'];
+        return strings.indexOf(elem.childNodes[1].childNodes[col_index].firstChild.data);
+    };
+}
+
+function reset_sort_headers() {
+    find_all('.sort-icon').forEach(function(elem) {
+        elem.parentNode.removeChild(elem);
+    });
+    find_all('.sortable').forEach(function(elem) {
+        var icon = document.createElement("div");
+        icon.className = "sort-icon";
+        icon.textContent = "vvv";
+        elem.insertBefore(icon, elem.firstChild);
+        elem.classList.remove("desc", "active");
+        elem.classList.add("asc", "inactive");
+    });
+}
+
+function toggle_sort_states(elem) {
+    //if active, toggle between asc and desc
+    if (elem.classList.contains('active')) {
+        elem.classList.toggle('asc');
+        elem.classList.toggle('desc');
+    }
+
+    //if inactive, reset all other functions and add ascending active
+    if (elem.classList.contains('inactive')) {
+        reset_sort_headers();
+        elem.classList.remove('inactive');
+        elem.classList.add('active');
+    }
+}
+
+function is_all_rows_hidden(value) {
+  return value.hidden == false;
+}
+
+function filter_table(elem) {
+    var outcome_att = "data-test-result";
+    var outcome = elem.getAttribute(outcome_att);
+    class_outcome = outcome + " results-table-row";
+    var outcome_rows = document.getElementsByClassName(class_outcome);
+
+    for(var i = 0; i < outcome_rows.length; i++){
+        outcome_rows[i].hidden = !elem.checked;
+    }
+
+    var rows = find_all('.results-table-row').filter(is_all_rows_hidden);
+    var all_rows_hidden = rows.length == 0 ? true : false;
+    var not_found_message = document.getElementById("not-found-message");
+    not_found_message.hidden = !all_rows_hidden;
+}
+</script>
+    <h1>report.html</h1>
+    <p>Report generated on 24-Sep-2018 at 17:41:05 by<a href="https://pypi.python.org/pypi/pytest-html"> pytest-html</a> v1.19.0</p>
+    <h2>Environment</h2>
+    <table id="environment">
+      <tr>
+        <td>Packages</td>
+        <td>{&apos;pytest&apos;: &apos;3.8.0&apos;, &apos;py&apos;: &apos;1.6.0&apos;, &apos;pluggy&apos;: &apos;0.7.1&apos;}</td></tr>
+      <tr>
+        <td>Platform</td>
+        <td>Windows-10-10.0.17134-SP0</td></tr>
+      <tr>
+        <td>Plugins</td>
+        <td>{&apos;ordering&apos;: &apos;0.5&apos;, &apos;metadata&apos;: &apos;1.7.0&apos;, &apos;html&apos;: &apos;1.19.0&apos;}</td></tr>
+      <tr>
+        <td>Python</td>
+        <td>3.7.0</td></tr></table>
+    <h2>Summary</h2>
+    <p>15 tests ran in 206.05 seconds. </p>
+    <p class="filter" hidden="true">(Un)check the boxes to filter the results.</p><input checked="true" class="filter" data-test-result="passed" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="passed">15 passed</span>, <input checked="true" class="filter" data-test-result="skipped" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="skipped">0 skipped</span>, <input checked="true" class="filter" data-test-result="failed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="failed">0 failed</span>, <input checked="true" class="filter" data-test-result="error" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="error">0 errors</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="xfailed">0 expected failures</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="xpassed">0 unexpected passes</span>
+    <h2>Results</h2>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable result initial-sort" col="result">Result</th>
+          <th class="sortable" col="name">Test</th>
+          <th class="sortable numeric" col="duration">Duration</th>
+          <th>Links</th></tr>
+        <tr hidden="true" id="not-found-message">
+          <th colspan="4">No results found. Try to check the filters</th></tr></thead>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_suite_demo.py::LoginTests::test_invalid_login</td>
+          <td class="col-duration">8.41</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">------------------------------ Captured log setup ------------------------------<br/>conftest.py                 13 INFO     Running get login one time setup
+config_reader.py            82 INFO     URL ::https://www.surveymonkey.com
+selenium_driver.py          96 INFO     Element found with locator: //div[contains(@class,&#x27;inner-header-top&#x27;)]//a[contains(@class,&#x27;log-in&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[contains(@class,&#x27;inner-header-top&#x27;)]//a[contains(@class,&#x27;log-in&#x27;)] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: username and  locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: password and  locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: username and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: username locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: password and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: password locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: //div[contains(@class,&#x27;input-list-item&#x27;)]//button[@type=&#x27;submit&#x27;] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[contains(@class,&#x27;input-list-item&#x27;)]//button[@type=&#x27;submit&#x27;] locator_type: xpath------------------------------ Captured log call -------------------------------<br/>login_tests.py              58 INFO     In test_invalid_login
+selenium_driver.py          96 INFO     Element found with locator: userAcctTab_MainMenu and  locator_type: id
+selenium_driver.py         134 INFO     Clicked on element with locator: userAcctTab_MainMenu locator_type: id
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py         134 INFO     Clicked on element with locator:  locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: //div[contains(@class,&#x27;inner-header-top&#x27;)]//a[contains(@class,&#x27;log-in&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[contains(@class,&#x27;inner-header-top&#x27;)]//a[contains(@class,&#x27;log-in&#x27;)] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: username and  locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: password and  locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: username and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: username locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: password and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: password locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: //div[contains(@class,&#x27;input-list-item&#x27;)]//button[@type=&#x27;submit&#x27;] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[contains(@class,&#x27;input-list-item&#x27;)]//button[@type=&#x27;submit&#x27;] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //div[contains(@class,&#x27;account-header&#x27;)]//h1[contains(@class,&#x27;page-title&#x27;)] and  locator_type: xpath
+selenium_driver.py         204 INFO     Element present with locator: //div[contains(@class,&#x27;account-header&#x27;)]//h1[contains(@class,&#x27;page-title&#x27;)] locator_type: xpath
+login_tests.py              62 INFO     Login failed ::True
+teststatus.py               30 INFO     ### VERIFICATION SUCCESSFUL :: + Invalid Login Verification
+teststatus.py               63 INFO     test_invalid_login ### TEST SUCCESSFUL</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_suite_demo.py::LoginTests::test_valid_login_1___akanksha_agrawal____password_123__</td>
+          <td class="col-duration">3.19</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">------------------------------ Captured log call -------------------------------<br/>login_tests.py              42 INFO     In test_valid_login
+selenium_driver.py          96 INFO     Element found with locator: //div[contains(@class,&#x27;inner-header-top&#x27;)]//a[contains(@class,&#x27;log-in&#x27;)] and  locator_type: xpath
+selenium_driver.py         137 INFO     Cannot click on the element with locator: //div[contains(@class,&#x27;inner-header-top&#x27;)]//a[contains(@class,&#x27;log-in&#x27;)] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: username and  locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: password and  locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: username and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: username locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: password and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: password locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: //div[contains(@class,&#x27;input-list-item&#x27;)]//button[@type=&#x27;submit&#x27;] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[contains(@class,&#x27;input-list-item&#x27;)]//button[@type=&#x27;submit&#x27;] locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py         204 INFO     Element present with locator:  locator_type: id
+login_tests.py              45 INFO     Successfully logged in ::True
+teststatus.py               30 INFO     ### VERIFICATION SUCCESSFUL :: + Valid Login Verification
+teststatus.py               63 INFO     test_valid_login ### TEST SUCCESSFUL</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_suite_demo.py::CreateSurveyTests::test_create_survey</td>
+          <td class="col-duration">24.36</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">------------------------------ Captured log setup ------------------------------<br/>conftest.py                 13 INFO     Running get login one time setup
+config_reader.py            82 INFO     URL ::https://www.surveymonkey.com
+selenium_driver.py          96 INFO     Element found with locator: //div[contains(@class,&#x27;inner-header-top&#x27;)]//a[contains(@class,&#x27;log-in&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[contains(@class,&#x27;inner-header-top&#x27;)]//a[contains(@class,&#x27;log-in&#x27;)] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: username and  locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: password and  locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: username and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: username locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: password and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: password locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: //div[contains(@class,&#x27;input-list-item&#x27;)]//button[@type=&#x27;submit&#x27;] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[contains(@class,&#x27;input-list-item&#x27;)]//button[@type=&#x27;submit&#x27;] locator_type: xpath------------------------------ Captured log call -------------------------------<br/>create_survey_tests.py      37 INFO     In test_create_survey
+config_reader.py            98 INFO     Survey Title ::First Survey
+selenium_driver.py          96 INFO     Element found with locator: //div[@class=&#x27;actions&#x27;]//a[contains(@class,&#x27;create-survey&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@class=&#x27;actions&#x27;]//a[contains(@class,&#x27;create-survey&#x27;)] locator_type: xpath
+selenium_driver.py          99 INFO     Element not found with locator: scratch and  locator_type: id
+selenium_driver.py         208 INFO     Element not present with locator: scratch locator_type: id
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: surveyTitle and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: surveyTitle locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: //div[@class=&#x27;Select-control&#x27;]//div[@class=&#x27;Select-placeholder&#x27;] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@class=&#x27;Select-control&#x27;]//div[@class=&#x27;Select-placeholder&#x27;] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: react-select-2--option-1 and  locator_type: id
+selenium_driver.py         134 INFO     Clicked on element with locator: react-select-2--option-1 locator_type: id
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //button[contains(text(),&#x27;CREATE SURVEY&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //button[contains(text(),&#x27;CREATE SURVEY&#x27;)] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //div[@class=&#x27;global-navigation-header-centered&#x27;]//a[contains(@href,&#x27;/create/?sm=&#x27;)] and  locator_type: xpath
+selenium_driver.py         204 INFO     Element present with locator: //div[@class=&#x27;global-navigation-header-centered&#x27;]//a[contains(@href,&#x27;/create/?sm=&#x27;)] locator_type: xpath
+create_survey_tests.py      40 INFO     Survey created ::True
+teststatus.py               30 INFO     ### VERIFICATION SUCCESSFUL :: + Survey created Verification
+teststatus.py               63 INFO     test_create_survey ### TEST SUCCESSFUL</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_suite_demo.py::SurveyOperationsTests::test_change_survey_title</td>
+          <td class="col-duration">14.87</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">------------------------------ Captured log setup ------------------------------<br/>conftest.py                 36 INFO     Running get survey one time setup
+config_reader.py            82 INFO     URL ::https://www.surveymonkey.com
+selenium_driver.py          96 INFO     Element found with locator: //div[contains(@class,&#x27;inner-header-top&#x27;)]//a[contains(@class,&#x27;log-in&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[contains(@class,&#x27;inner-header-top&#x27;)]//a[contains(@class,&#x27;log-in&#x27;)] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: username and  locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: password and  locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: username and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: username locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: password and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: password locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: //div[contains(@class,&#x27;input-list-item&#x27;)]//button[@type=&#x27;submit&#x27;] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[contains(@class,&#x27;input-list-item&#x27;)]//button[@type=&#x27;submit&#x27;] locator_type: xpath
+config_reader.py            98 INFO     Survey Title ::First Survey
+selenium_driver.py          96 INFO     Element found with locator: //div[@class=&#x27;actions&#x27;]//a[contains(@class,&#x27;create-survey&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@class=&#x27;actions&#x27;]//a[contains(@class,&#x27;create-survey&#x27;)] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: scratch and  locator_type: id
+selenium_driver.py         204 INFO     Element present with locator: scratch locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: scratch and  locator_type: id
+selenium_driver.py         134 INFO     Clicked on element with locator: scratch locator_type: id
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: surveyTitle and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: surveyTitle locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: //div[@class=&#x27;Select-control&#x27;]//div[@class=&#x27;Select-placeholder&#x27;] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@class=&#x27;Select-control&#x27;]//div[@class=&#x27;Select-placeholder&#x27;] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: react-select-2--option-1 and  locator_type: id
+selenium_driver.py         134 INFO     Clicked on element with locator: react-select-2--option-1 locator_type: id
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //button[contains(text(),&#x27;CREATE SURVEY&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //button[contains(text(),&#x27;CREATE SURVEY&#x27;)] locator_type: xpath------------------------------ Captured log call -------------------------------<br/>survey_operations_tests.py   40 INFO     In test_change_survey_title
+config_reader.py           114 INFO     Modified Survey Title ::Survey Monkey-First Survey
+selenium_driver.py          99 INFO     Element not found with locator: //div[@id=&#x27;suggested-design-dialog&#x27;]//a[contains(text(),&#x27;REMOVE&#x27;)] and  locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[contains(@class,&#x27;has-survey-title&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[contains(@class,&#x27;has-survey-title&#x27;)] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: surveyTitle and  locator_type: id
+selenium_driver.py         165 INFO     Clear field with locator: surveyTitle locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: surveyTitle and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: surveyTitle locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: //form[@id=&#x27;surveyTitleForm&#x27;]//a[contains(@class,&#x27;save&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //form[@id=&#x27;surveyTitleForm&#x27;]//a[contains(@class,&#x27;save&#x27;)] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //h2[contains(@class,&#x27;notranslate&#x27;)] and  locator_type: xpath
+selenium_driver.py         183 INFO     Getting text on element :: Survey Title
+selenium_driver.py         184 INFO     The text is :: &#x27;First Survey&#x27;
+survey_operations_tests.py   43 INFO     Edited title received ::First Survey
+teststatus.py               30 INFO     ### VERIFICATION SUCCESSFUL :: + Title Change Verification
+teststatus.py               63 INFO     test_change_survey_title ### TEST SUCCESSFUL</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_suite_demo.py::SurveyOperationsTests::test_add_page_title</td>
+          <td class="col-duration">3.67</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">------------------------------ Captured log call -------------------------------<br/>survey_operations_tests.py   55 INFO     In test_add_page_title
+config_reader.py           130 INFO     Page Title ::Survey for Customer Feedback
+selenium_driver.py          96 INFO     Element found with locator: //div[contains(@class,&#x27;page-title-container clearfix&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[contains(@class,&#x27;page-title-container clearfix&#x27;)] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: pageTitle and  locator_type: id
+selenium_driver.py         165 INFO     Clear field with locator: pageTitle locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: pageTitle and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: pageTitle locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: //form[@id=&#x27;pageTitleForm&#x27;]//a[contains(@class,&#x27;save&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //form[@id=&#x27;pageTitleForm&#x27;]//a[contains(@class,&#x27;save&#x27;)] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //span[contains(@class,&#x27;page-title user-generated&#x27;)] and  locator_type: xpath
+selenium_driver.py         183 INFO     Getting text on element :: Page Title
+selenium_driver.py         184 INFO     The text is :: &#x27;Survey for Customer Feedback&#x27;
+survey_operations_tests.py   58 INFO     Page title received ::Survey for Customer Feedback
+teststatus.py               30 INFO     ### VERIFICATION SUCCESSFUL :: + Add Page Verification
+teststatus.py               63 INFO     test_add_page_title ### TEST SUCCESSFUL</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_suite_demo.py::SurveyOperationsTests::test_verify_question1_added</td>
+          <td class="col-duration">6.88</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">------------------------------ Captured log call -------------------------------<br/>survey_operations_tests.py   70 INFO     In test_verify_question1_added
+survey_questions.py        112 INFO     Adding question 1
+config_reader.py           148 INFO     Question ::Enter your email.
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: editTitle and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: editTitle locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: changeQType and  locator_type: id
+selenium_driver.py         134 INFO     Clicked on element with locator: changeQType locator_type: id
+config_reader.py           166 INFO     Question Type ::Single Textbox
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //a[contains(text(),&#x27;Single Textbox&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //a[contains(text(),&#x27;Single Textbox&#x27;)] locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;save&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;save&#x27;)] locator_type: xpath
+config_reader.py           148 INFO     Question ::Enter your email.
+config_reader.py           166 INFO     Question Type ::Single Textbox
+survey_questions.py        222 INFO     In verify_question_added_successfully :: Enter your email. :: Single Textbox
+selenium_driver.py          96 INFO     Element found with locator: //h4[@class=&#x27;question-title-container&#x27;]//span[contains(text(),&#x27;Enter your email.&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator:  locator_type: id
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //a[@id=&#x27;changeQType&#x27;]//span[contains(text(),&#x27;Single Textbox&#x27;)] and  locator_type: xpath
+selenium_driver.py         204 INFO     Element present with locator: //a[@id=&#x27;changeQType&#x27;]//span[contains(text(),&#x27;Single Textbox&#x27;)] locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;cancel&#x27;)][contains(text(),&#x27;CANCEL&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;cancel&#x27;)][contains(text(),&#x27;CANCEL&#x27;)] locator_type: xpath
+survey_operations_tests.py   73 INFO     Question1 verification result ::True
+teststatus.py               30 INFO     ### VERIFICATION SUCCESSFUL :: + Question1 Verification
+teststatus.py               63 INFO     test_verify_question1_added ### TEST SUCCESSFUL</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_suite_demo.py::SurveyOperationsTests::test_verify_question2_added</td>
+          <td class="col-duration">7.39</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">------------------------------ Captured log call -------------------------------<br/>survey_operations_tests.py   85 INFO     In test_verify_question2_added
+survey_questions.py        119 INFO     Adding question 2
+selenium_driver.py          96 INFO     Element found with locator: //li[@title=&#x27;Builder&#x27;] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //li[@title=&#x27;Builder&#x27;] locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;builderQuestionContainer&#x27;]//li[1] and  locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //div[contains(@class,&#x27;add-question-btn&#x27;)] and  locator_type: xpath
+selenium_driver.py         330 INFO     Element dragged and dropped
+config_reader.py           148 INFO     Question ::How often do you use SurveyMonkey?
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: editTitle and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: editTitle locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[4]/td[2]/div/div[1] and  locator_type: xpath
+selenium_driver.py         152 INFO     Sent data to the element with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[4]/td[2]/div/div[1] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[5]/td[2]/div/div[1] and  locator_type: xpath
+selenium_driver.py         152 INFO     Sent data to the element with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[5]/td[2]/div/div[1] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[6]/td[2]/div/div[1] and  locator_type: xpath
+selenium_driver.py         152 INFO     Sent data to the element with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[6]/td[2]/div/div[1] locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;save&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;save&#x27;)] locator_type: xpath
+config_reader.py           148 INFO     Question ::How often do you use SurveyMonkey?
+config_reader.py           166 INFO     Question Type ::Multiple Choice
+survey_questions.py        222 INFO     In verify_question_added_successfully :: How often do you use SurveyMonkey? :: Multiple Choice
+selenium_driver.py          96 INFO     Element found with locator: //h4[@class=&#x27;question-title-container&#x27;]//span[contains(text(),&#x27;How often do you use SurveyMonkey?&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator:  locator_type: id
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //a[@id=&#x27;changeQType&#x27;]//span[contains(text(),&#x27;Multiple Choice&#x27;)] and  locator_type: xpath
+selenium_driver.py         204 INFO     Element present with locator: //a[@id=&#x27;changeQType&#x27;]//span[contains(text(),&#x27;Multiple Choice&#x27;)] locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;cancel&#x27;)][contains(text(),&#x27;CANCEL&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;cancel&#x27;)][contains(text(),&#x27;CANCEL&#x27;)] locator_type: xpath
+survey_operations_tests.py   88 INFO     Question2 verification result ::True
+teststatus.py               30 INFO     ### VERIFICATION SUCCESSFUL :: + Question2 Verification
+teststatus.py               63 INFO     test_verify_question2_added ### TEST SUCCESSFUL</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_suite_demo.py::SurveyOperationsTests::test_verify_question3_added</td>
+          <td class="col-duration">7.28</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">------------------------------ Captured log call -------------------------------<br/>survey_operations_tests.py  100 INFO     In test_verify_question3_added
+survey_questions.py        130 INFO     Adding question 3
+selenium_driver.py          96 INFO     Element found with locator: //a[contains(@class,&#x27;main-add-question-cta wds-button&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //a[contains(@class,&#x27;main-add-question-cta wds-button&#x27;)] locator_type: xpath
+config_reader.py           148 INFO     Question ::From When are you using SurveyMonkey?
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: editTitle and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: editTitle locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: changeQType and  locator_type: id
+selenium_driver.py         134 INFO     Clicked on element with locator: changeQType locator_type: id
+config_reader.py           166 INFO     Question Type ::Date / Time
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //a[contains(text(),&#x27;Date / Time&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //a[contains(text(),&#x27;Date / Time&#x27;)] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //table[@id=&#x27;rows&#x27;]//label[contains(text(),&#x27;Time Info&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //table[@id=&#x27;rows&#x27;]//label[contains(text(),&#x27;Time Info&#x27;)] locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;save&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;save&#x27;)] locator_type: xpath
+config_reader.py           148 INFO     Question ::From When are you using SurveyMonkey?
+config_reader.py           166 INFO     Question Type ::Date / Time
+survey_questions.py        222 INFO     In verify_question_added_successfully :: From When are you using SurveyMonkey? :: Date / Time
+selenium_driver.py          96 INFO     Element found with locator: //h4[@class=&#x27;question-title-container&#x27;]//span[contains(text(),&#x27;From When are you using SurveyMonkey?&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator:  locator_type: id
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //a[@id=&#x27;changeQType&#x27;]//span[contains(text(),&#x27;Date / Time&#x27;)] and  locator_type: xpath
+selenium_driver.py         204 INFO     Element present with locator: //a[@id=&#x27;changeQType&#x27;]//span[contains(text(),&#x27;Date / Time&#x27;)] locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;cancel&#x27;)][contains(text(),&#x27;CANCEL&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;cancel&#x27;)][contains(text(),&#x27;CANCEL&#x27;)] locator_type: xpath
+survey_operations_tests.py  103 INFO     Question3 verification result ::True
+teststatus.py               30 INFO     ### VERIFICATION SUCCESSFUL :: + Question3 Verification
+teststatus.py               63 INFO     test_verify_question3_added ### TEST SUCCESSFUL</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_suite_demo.py::SurveyOperationsTests::test_verify_question4_added</td>
+          <td class="col-duration">7.55</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">------------------------------ Captured log call -------------------------------<br/>survey_operations_tests.py  115 INFO     In test_verify_question4_added
+survey_questions.py        139 INFO     Adding question 4
+selenium_driver.py          96 INFO     Element found with locator: //a[contains(@class,&#x27;main-add-question-cta wds-button&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //a[contains(@class,&#x27;main-add-question-cta wds-button&#x27;)] locator_type: xpath
+config_reader.py           148 INFO     Question ::How will rate the ease of survey creation?
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: editTitle and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: editTitle locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: changeQType and  locator_type: id
+selenium_driver.py         134 INFO     Clicked on element with locator: changeQType locator_type: id
+config_reader.py           166 INFO     Question Type ::Star Rating
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //a[contains(text(),&#x27;Star Rating&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //a[contains(text(),&#x27;Star Rating&#x27;)] locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;save&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;save&#x27;)] locator_type: xpath
+config_reader.py           148 INFO     Question ::How will rate the ease of survey creation?
+config_reader.py           166 INFO     Question Type ::Star Rating
+survey_questions.py        222 INFO     In verify_question_added_successfully :: How will rate the ease of survey creation? :: Star Rating
+selenium_driver.py          96 INFO     Element found with locator: //h4[@class=&#x27;question-title-container&#x27;]//span[contains(text(),&#x27;How will rate the ease of survey creation?&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator:  locator_type: id
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //a[@id=&#x27;changeQType&#x27;]//span[contains(text(),&#x27;Star Rating&#x27;)] and  locator_type: xpath
+selenium_driver.py         204 INFO     Element present with locator: //a[@id=&#x27;changeQType&#x27;]//span[contains(text(),&#x27;Star Rating&#x27;)] locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;cancel&#x27;)][contains(text(),&#x27;CANCEL&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;cancel&#x27;)][contains(text(),&#x27;CANCEL&#x27;)] locator_type: xpath
+survey_operations_tests.py  118 INFO     Question4 verification result ::True
+teststatus.py               30 INFO     ### VERIFICATION SUCCESSFUL :: + Question4 Verification
+teststatus.py               63 INFO     test_verify_question4_added ### TEST SUCCESSFUL</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_suite_demo.py::SurveyOperationsTests::test_verify_question5_added</td>
+          <td class="col-duration">7.30</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">------------------------------ Captured log call -------------------------------<br/>survey_operations_tests.py  130 INFO     In test_verify_question5_added
+survey_questions.py        148 INFO     Adding question 5
+selenium_driver.py          96 INFO     Element found with locator: //li[@title=&#x27;Builder&#x27;] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //li[@title=&#x27;Builder&#x27;] locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;builderQuestionContainer&#x27;]//li[4] and  locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //div[contains(@class,&#x27;add-question-btn&#x27;)] and  locator_type: xpath
+selenium_driver.py         330 INFO     Element dragged and dropped
+config_reader.py           148 INFO     Question ::Did you get meaningful data from survey analysis?
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: editTitle and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: editTitle locator_type: id
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;editQuestion&#x27;]//select[@id=&#x27;answerBankCategorySelect&#x27;] and  locator_type: xpath
+selenium_driver.py         314 INFO     Selected element with select type: visible text
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;save&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;save&#x27;)] locator_type: xpath
+config_reader.py           148 INFO     Question ::Did you get meaningful data from survey analysis?
+config_reader.py           166 INFO     Question Type ::Dropdown
+survey_questions.py        222 INFO     In verify_question_added_successfully :: Did you get meaningful data from survey analysis? :: Dropdown
+selenium_driver.py          96 INFO     Element found with locator: //h4[@class=&#x27;question-title-container&#x27;]//span[contains(text(),&#x27;Did you get meaningful data from survey analysis?&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator:  locator_type: id
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //a[@id=&#x27;changeQType&#x27;]//span[contains(text(),&#x27;Dropdown&#x27;)] and  locator_type: xpath
+selenium_driver.py         204 INFO     Element present with locator: //a[@id=&#x27;changeQType&#x27;]//span[contains(text(),&#x27;Dropdown&#x27;)] locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;cancel&#x27;)][contains(text(),&#x27;CANCEL&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;cancel&#x27;)][contains(text(),&#x27;CANCEL&#x27;)] locator_type: xpath
+survey_operations_tests.py  133 INFO     Question5 verification result ::True
+teststatus.py               30 INFO     ### VERIFICATION SUCCESSFUL :: + Question5 Verification
+teststatus.py               63 INFO     test_verify_question5_added ### TEST SUCCESSFUL</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_suite_demo.py::SurveyOperationsTests::test_verify_question6_added</td>
+          <td class="col-duration">8.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">------------------------------ Captured log call -------------------------------<br/>survey_operations_tests.py  145 INFO     In test_verify_question6_added
+survey_questions.py        159 INFO     Adding question 6
+selenium_driver.py          96 INFO     Element found with locator: //li[@title=&#x27;Builder&#x27;] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //li[@title=&#x27;Builder&#x27;] locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;builderQuestionContainer&#x27;]//li[2] and  locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //div[contains(@class,&#x27;add-question-btn&#x27;)] and  locator_type: xpath
+selenium_driver.py         330 INFO     Element dragged and dropped
+config_reader.py           148 INFO     Question ::Check the Features you like about SurveyMonkey?
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: editTitle and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: editTitle locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[4]/td[2]/div/div[1] and  locator_type: xpath
+selenium_driver.py         152 INFO     Sent data to the element with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[4]/td[2]/div/div[1] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[5]/td[2]/div/div[1] and  locator_type: xpath
+selenium_driver.py         152 INFO     Sent data to the element with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[5]/td[2]/div/div[1] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[6]/td[2]/div/div[1] and  locator_type: xpath
+selenium_driver.py         152 INFO     Sent data to the element with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[6]/td[2]/div/div[1] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[7]/td[2]/div/div[1] and  locator_type: xpath
+selenium_driver.py         152 INFO     Sent data to the element with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[7]/td[2]/div/div[1] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[8]/td[2]/div/div[1] and  locator_type: xpath
+selenium_driver.py         152 INFO     Sent data to the element with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[8]/td[2]/div/div[1] locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;save&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;save&#x27;)] locator_type: xpath
+config_reader.py           148 INFO     Question ::Check the Features you like about SurveyMonkey?
+config_reader.py           166 INFO     Question Type ::Checkboxes
+survey_questions.py        222 INFO     In verify_question_added_successfully :: Check the Features you like about SurveyMonkey? :: Checkboxes
+selenium_driver.py          96 INFO     Element found with locator: //h4[@class=&#x27;question-title-container&#x27;]//span[contains(text(),&#x27;Check the Features you like about SurveyMonkey?&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator:  locator_type: id
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //a[@id=&#x27;changeQType&#x27;]//span[contains(text(),&#x27;Checkboxes&#x27;)] and  locator_type: xpath
+selenium_driver.py         204 INFO     Element present with locator: //a[@id=&#x27;changeQType&#x27;]//span[contains(text(),&#x27;Checkboxes&#x27;)] locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;cancel&#x27;)][contains(text(),&#x27;CANCEL&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;cancel&#x27;)][contains(text(),&#x27;CANCEL&#x27;)] locator_type: xpath
+survey_operations_tests.py  148 INFO     Question6 verification result ::True
+teststatus.py               30 INFO     ### VERIFICATION SUCCESSFUL :: + Question6 Verification
+teststatus.py               63 INFO     test_verify_question6_added ### TEST SUCCESSFUL</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_suite_demo.py::SurveyOperationsTests::test_verify_question7_added</td>
+          <td class="col-duration">8.62</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">------------------------------ Captured log call -------------------------------<br/>survey_operations_tests.py  160 INFO     In test_verify_question7_added
+survey_questions.py        172 INFO     Adding question 7
+selenium_driver.py          96 INFO     Element found with locator: //a[contains(@class,&#x27;main-add-question-cta wds-button&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //a[contains(@class,&#x27;main-add-question-cta wds-button&#x27;)] locator_type: xpath
+config_reader.py           148 INFO     Question ::Rate our features.
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: editTitle and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: editTitle locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: changeQType and  locator_type: id
+selenium_driver.py         134 INFO     Clicked on element with locator: changeQType locator_type: id
+config_reader.py           166 INFO     Question Type ::Matrix / Rating Scale
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //a[contains(text(),&#x27;Matrix / Rating Scale&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //a[contains(text(),&#x27;Matrix / Rating Scale&#x27;)] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;rowsWrap&#x27;]//table/tbody/tr[3]/td[1]/div/div[1] and  locator_type: xpath
+selenium_driver.py         152 INFO     Sent data to the element with locator: //div[@id=&#x27;rowsWrap&#x27;]//table/tbody/tr[3]/td[1]/div/div[1] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;rowsWrap&#x27;]//table/tbody/tr[4]/td[1]/div/div[1] and  locator_type: xpath
+selenium_driver.py         152 INFO     Sent data to the element with locator: //div[@id=&#x27;rowsWrap&#x27;]//table/tbody/tr[4]/td[1]/div/div[1] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;rowsWrap&#x27;]//table/tbody/tr[5]/td[1]/div/div[1] and  locator_type: xpath
+selenium_driver.py         152 INFO     Sent data to the element with locator: //div[@id=&#x27;rowsWrap&#x27;]//table/tbody/tr[5]/td[1]/div/div[1] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;columnsWrap&#x27;]//table/tbody/tr[2]/td[1]/div/div[1] and  locator_type: xpath
+selenium_driver.py         152 INFO     Sent data to the element with locator: //div[@id=&#x27;columnsWrap&#x27;]//table/tbody/tr[2]/td[1]/div/div[1] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;columnsWrap&#x27;]//table/tbody/tr[3]/td[1]/div/div[1] and  locator_type: xpath
+selenium_driver.py         152 INFO     Sent data to the element with locator: //div[@id=&#x27;columnsWrap&#x27;]//table/tbody/tr[3]/td[1]/div/div[1] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;columnsWrap&#x27;]//table/tbody/tr[4]/td[1]/div/div[1] and  locator_type: xpath
+selenium_driver.py         152 INFO     Sent data to the element with locator: //div[@id=&#x27;columnsWrap&#x27;]//table/tbody/tr[4]/td[1]/div/div[1] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;columnsWrap&#x27;]//table/tbody/tr[5]/td[1]/div/div[1] and  locator_type: xpath
+selenium_driver.py         152 INFO     Sent data to the element with locator: //div[@id=&#x27;columnsWrap&#x27;]//table/tbody/tr[5]/td[1]/div/div[1] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;columnsWrap&#x27;]//table/tbody/tr[6]/td[3]/a[2]/span and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@id=&#x27;columnsWrap&#x27;]//table/tbody/tr[6]/td[3]/a[2]/span locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;save&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;save&#x27;)] locator_type: xpath
+config_reader.py           148 INFO     Question ::Rate our features.
+config_reader.py           166 INFO     Question Type ::Matrix / Rating Scale
+survey_questions.py        222 INFO     In verify_question_added_successfully :: Rate our features. :: Matrix / Rating Scale
+selenium_driver.py          96 INFO     Element found with locator: //h4[@class=&#x27;question-title-container&#x27;]//span[contains(text(),&#x27;Rate our features.&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator:  locator_type: id
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //a[@id=&#x27;changeQType&#x27;]//span[contains(text(),&#x27;Matrix / Rating Scale&#x27;)] and  locator_type: xpath
+selenium_driver.py         204 INFO     Element present with locator: //a[@id=&#x27;changeQType&#x27;]//span[contains(text(),&#x27;Matrix / Rating Scale&#x27;)] locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;cancel&#x27;)][contains(text(),&#x27;CANCEL&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;cancel&#x27;)][contains(text(),&#x27;CANCEL&#x27;)] locator_type: xpath
+survey_operations_tests.py  163 INFO     Question7 verification result ::True
+teststatus.py               30 INFO     ### VERIFICATION SUCCESSFUL :: + Question7 Verification
+teststatus.py               63 INFO     test_verify_question7_added ### TEST SUCCESSFUL</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_suite_demo.py::SurveyOperationsTests::test_verify_question8_added</td>
+          <td class="col-duration">8.17</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">------------------------------ Captured log call -------------------------------<br/>survey_operations_tests.py  175 INFO     In test_verify_question8_added
+survey_questions.py        189 INFO     Adding question 8
+selenium_driver.py          96 INFO     Element found with locator: //a[contains(@class,&#x27;main-add-question-cta wds-button&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //a[contains(@class,&#x27;main-add-question-cta wds-button&#x27;)] locator_type: xpath
+config_reader.py           148 INFO     Question ::List the features you like most.
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: editTitle and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: editTitle locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: changeQType and  locator_type: id
+selenium_driver.py         134 INFO     Clicked on element with locator: changeQType locator_type: id
+config_reader.py           166 INFO     Question Type ::Multiple Textboxes
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //a[contains(text(),&#x27;Multiple Textboxes&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //a[contains(text(),&#x27;Multiple Textboxes&#x27;)] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[3]/td[1]/div[1]/div[1] and  locator_type: xpath
+selenium_driver.py         152 INFO     Sent data to the element with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[3]/td[1]/div[1]/div[1] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[4]/td[1]/div[1]/div[1] and  locator_type: xpath
+selenium_driver.py         152 INFO     Sent data to the element with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[4]/td[1]/div[1]/div[1] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[5]/td[1]/div[1]/div[1] and  locator_type: xpath
+selenium_driver.py         152 INFO     Sent data to the element with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[5]/td[1]/div[1]/div[1] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[6]/td[1]/div[1]/div[1] and  locator_type: xpath
+selenium_driver.py         152 INFO     Sent data to the element with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[6]/td[1]/div[1]/div[1] locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[7]/td[1]/div[1]/div[1] and  locator_type: xpath
+selenium_driver.py         152 INFO     Sent data to the element with locator: //table[@id=&#x27;rows&#x27;]/tbody/tr[7]/td[1]/div[1]/div[1] locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;save&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;save&#x27;)] locator_type: xpath
+config_reader.py           148 INFO     Question ::List the features you like most.
+config_reader.py           166 INFO     Question Type ::Multiple Textboxes
+survey_questions.py        222 INFO     In verify_question_added_successfully :: List the features you like most. :: Multiple Textboxes
+selenium_driver.py          96 INFO     Element found with locator: //h4[@class=&#x27;question-title-container&#x27;]//span[contains(text(),&#x27;List the features you like most.&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator:  locator_type: id
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //a[@id=&#x27;changeQType&#x27;]//span[contains(text(),&#x27;Multiple Textboxes&#x27;)] and  locator_type: xpath
+selenium_driver.py         204 INFO     Element present with locator: //a[@id=&#x27;changeQType&#x27;]//span[contains(text(),&#x27;Multiple Textboxes&#x27;)] locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;cancel&#x27;)][contains(text(),&#x27;CANCEL&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;cancel&#x27;)][contains(text(),&#x27;CANCEL&#x27;)] locator_type: xpath
+survey_operations_tests.py  178 INFO     Question8 verification result ::True
+teststatus.py               30 INFO     ### VERIFICATION SUCCESSFUL :: + Question8 Verification
+teststatus.py               63 INFO     test_verify_question8_added ### TEST SUCCESSFUL</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_suite_demo.py::SurveyOperationsTests::test_verify_question9_added</td>
+          <td class="col-duration">7.29</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">------------------------------ Captured log call -------------------------------<br/>survey_operations_tests.py  190 INFO     In test_verify_question9_added
+survey_questions.py        202 INFO     Adding question 9
+selenium_driver.py          96 INFO     Element found with locator: //li[@title=&#x27;Builder&#x27;] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //li[@title=&#x27;Builder&#x27;] locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;builderQuestionContainer&#x27;]//li[1] and  locator_type: xpath
+selenium_driver.py          96 INFO     Element found with locator: //div[contains(@class,&#x27;add-question-btn&#x27;)] and  locator_type: xpath
+selenium_driver.py         330 INFO     Element dragged and dropped
+config_reader.py           148 INFO     Question ::Will recommend SurveyMonkey to your friends / Colleagues?
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: editTitle and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: editTitle locator_type: id
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;editQuestion&#x27;]//select[@id=&#x27;answerBankCategorySelect&#x27;] and  locator_type: xpath
+selenium_driver.py         314 INFO     Selected element with select type: visible text
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;save&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;save&#x27;)] locator_type: xpath
+config_reader.py           148 INFO     Question ::Will recommend SurveyMonkey to your friends / Colleagues?
+config_reader.py           166 INFO     Question Type ::Multiple Choice
+survey_questions.py        222 INFO     In verify_question_added_successfully :: Will recommend SurveyMonkey to your friends / Colleagues? :: Multiple Choice
+selenium_driver.py          96 INFO     Element found with locator: //h4[@class=&#x27;question-title-container&#x27;]//span[contains(text(),&#x27;Will recommend SurveyMonkey to your friends / Colleagues?&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator:  locator_type: id
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //a[@id=&#x27;changeQType&#x27;]//span[contains(text(),&#x27;Multiple Choice&#x27;)] and  locator_type: xpath
+selenium_driver.py         204 INFO     Element present with locator: //a[@id=&#x27;changeQType&#x27;]//span[contains(text(),&#x27;Multiple Choice&#x27;)] locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;cancel&#x27;)][contains(text(),&#x27;CANCEL&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;cancel&#x27;)][contains(text(),&#x27;CANCEL&#x27;)] locator_type: xpath
+survey_operations_tests.py  193 INFO     Question9 verification result ::True
+teststatus.py               30 INFO     ### VERIFICATION SUCCESSFUL :: + Question9 Verification
+teststatus.py               63 INFO     test_verify_question9_added ### TEST SUCCESSFUL</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_suite_demo.py::SurveyOperationsTests::test_verify_question10_added</td>
+          <td class="col-duration">6.80</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">------------------------------ Captured log call -------------------------------<br/>survey_operations_tests.py  205 INFO     In test_verify_question10_added
+survey_questions.py        213 INFO     Adding question 10
+selenium_driver.py          96 INFO     Element found with locator: //a[contains(@class,&#x27;main-add-question-cta wds-button&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //a[contains(@class,&#x27;main-add-question-cta wds-button&#x27;)] locator_type: xpath
+config_reader.py           148 INFO     Question ::Comments / Feedback
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: editTitle and  locator_type: id
+selenium_driver.py         152 INFO     Sent data to the element with locator: editTitle locator_type: id
+selenium_driver.py          96 INFO     Element found with locator: changeQType and  locator_type: id
+selenium_driver.py         134 INFO     Clicked on element with locator: changeQType locator_type: id
+config_reader.py           166 INFO     Question Type ::Comment Box
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //a[contains(text(),&#x27;Comment Box&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //a[contains(text(),&#x27;Comment Box&#x27;)] locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;save&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;save&#x27;)] locator_type: xpath
+config_reader.py           148 INFO     Question ::Comments / Feedback
+config_reader.py           166 INFO     Question Type ::Comment Box
+survey_questions.py        222 INFO     In verify_question_added_successfully :: Comments / Feedback :: Comment Box
+selenium_driver.py          96 INFO     Element found with locator: //h4[@class=&#x27;question-title-container&#x27;]//span[contains(text(),&#x27;Comments / Feedback&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator:  locator_type: id
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //a[@id=&#x27;changeQType&#x27;]//span[contains(text(),&#x27;Comment Box&#x27;)] and  locator_type: xpath
+selenium_driver.py         204 INFO     Element present with locator: //a[@id=&#x27;changeQType&#x27;]//span[contains(text(),&#x27;Comment Box&#x27;)] locator_type: xpath
+selenium_driver.py         271 INFO     Waiting for maximum :: 60:: seconds for element to be clickable
+selenium_driver.py         278 INFO     Element appeared on the web page
+selenium_driver.py          96 INFO     Element found with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;cancel&#x27;)][contains(text(),&#x27;CANCEL&#x27;)] and  locator_type: xpath
+selenium_driver.py         134 INFO     Clicked on element with locator: //div[@id=&#x27;editQuestion&#x27;]//section[@class=&#x27;t1&#x27;]//a[contains(@class,&#x27;cancel&#x27;)][contains(text(),&#x27;CANCEL&#x27;)] locator_type: xpath
+survey_operations_tests.py  208 INFO     Question10 verification result ::True
+teststatus.py               30 INFO     ### VERIFICATION SUCCESSFUL :: + Question10 Verification
+teststatus.py               63 INFO     test_verify_question10_added ### TEST SUCCESSFUL</div></td></tr></tbody></table></body></html>

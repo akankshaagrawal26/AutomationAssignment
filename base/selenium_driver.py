@@ -14,6 +14,7 @@ import utilities.custom_logger as cl
 import logging
 import time
 import os
+import pytest
 
 
 class SeleniumDriver:
@@ -48,6 +49,14 @@ class SeleniumDriver:
             self.log.info("Screenshot saved to directory:: " + destination_file)
         except Exception as e:
             self.log.info("Exception occurred when taking screenshot", e)
+
+    def allure_attach_screenshot(self, name):
+        """
+        Attach a screenshot
+        :param name: Name to be appeared on the report under which screenshot will be shown.
+        """
+        name = str(name)
+        pytest.allure.attach(self.driver.get_screenshot_as_png(), name, attachment_type=pytest.allure.attachment_type.PNG)
 
     def get_title(self):
         """

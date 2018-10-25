@@ -6,7 +6,6 @@ import logging
 import utilities.custom_logger as cl
 
 log = cl.custom_logger(logging.DEBUG)
-log1 = cl.custom_logger("Demo")
 
 @pytest.yield_fixture(scope="class")
 def get_login(request, browser):

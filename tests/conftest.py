@@ -5,8 +5,9 @@ from pages.survey.create_survey import CreateSurvey
 import logging
 import utilities.custom_logger as cl
 
-log = cl.custom_logger(logging.ERROR)
-log1 = cl.custom_logger(logging.DEBUG)
+log = cl.custom_logger(logging.DEBUG)
+
+
 @pytest.yield_fixture(scope="class")
 def get_login(request, browser):
     log.info("Running get login one time setup")

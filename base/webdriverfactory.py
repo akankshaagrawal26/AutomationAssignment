@@ -6,6 +6,7 @@ It creates a webdriver instance based on browser configurations
 
 """
 from selenium import webdriver
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 import os
 from base.config_reader import ConfigReader
 from selenium.common.exceptions import TimeoutException
@@ -45,9 +46,11 @@ class WebDriverFactory:
                 # Set firefox driver
                 driver = webdriver.Firefox()
             else:
-                chromedriver = "D:\\Selenium\\chromedriver.exe"
-                os.environ["webdriver.chrome.driver"] = chromedriver
-                driver = webdriver.Chrome(chromedriver)
+                # chromedriver = "D:\\Selenium\\chromedriver.exe"
+                # os.environ["webdriver.chrome.driver"] = chromedriver
+                # driver = webdriver.Chrome(chromedriver)
+                driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub',
+                                          desired_capabilities=DesiredCapabilities.CHROME)
                 driver.set_window_size(1440, 900)
 
             # Setting Driver Implicit Time out for An Element
